@@ -238,6 +238,7 @@ th:first-child {{
 <b>🌬 Windiest:</b> {windiest["name"]} ({windiest["wind"]} mph)
 
 </div>
+"""
 for state in state_order:
 
     if state not in groups:
