@@ -25,4 +25,4 @@ jobs:
       - name: Run weather.py
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-        run: python weather.py
+        run: python -u weather.py
