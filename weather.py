@@ -344,7 +344,7 @@ response = resend.Emails.send({
 
     "from": "onboarding@resend.dev",
 
-    "to": "porterpayne04@gmail.com, porter.p@kiln.com",
+    "to": "porterpayne04@gmail.com", "porter.p@kiln.com",
 
     "subject": "Kiln Weather Report",
 
