@@ -342,7 +342,7 @@ print("Sending email...", flush=True)
 
 response = resend.Emails.send({
 
-    "from": "porter.p@kiln.com",
+    "from": "Weather@porterpayne.com",
 
      "to": [
         "porterpayne04@gmail.com",
