@@ -226,7 +226,7 @@ th:first-child {{
 <div class="container">
 
 <div class="header">
-<h1>🏡 HomeOS Morning Brief</h1>
+<h1>Kiln Weather Report</h1>
 <div>{today}</div>
 </div>
 
@@ -331,12 +331,6 @@ for state in state_order:
     html += "</table>"
 
 html += """
-<div class="footer">
-
-Generated automatically by
-<b>HomeOS Morning Brief</b>
-
-</div>
 
 </div>
 
@@ -352,7 +346,7 @@ response = resend.Emails.send({
 
     "to": "porterpayne04@gmail.com",
 
-    "subject": "🏡 HomeOS Morning Brief",
+    "subject": "Kiln Weather Report",
 
     "html": html,
 
