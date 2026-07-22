@@ -1,1 +1,12 @@
-
+[
+    {
+        "name": "Lindon, UT",
+        "latitude": 40.343,
+        "longitude": -111.720
+    },
+    {
+        "name": "Waynesville, NC",
+        "latitude": 35.488,
+        "longitude": -82.989
+    }
+]
