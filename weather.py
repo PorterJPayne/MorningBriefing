@@ -345,8 +345,8 @@ response = resend.Emails.send({
     "from": "Weather@porterpayne.com",
 
      "to": [
-        "porterpayne04@gmail.com",
-        "porter.p@kiln.com"
+        "porter.p@kiln.com",
+        "caleb.v@kiln.com"
     ],
 
     "subject": "Kiln Weather Report",
