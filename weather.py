@@ -3,13 +3,14 @@ import json
 import time
 import requests
 import resend
+
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-# ==========================
-# Configuration
-# ==========================
+# ============================================
+# HomeOS Morning Brief
+# ============================================
 
 resend.api_key = os.environ["RESEND_API_KEY"]
 
@@ -33,7 +34,7 @@ WEATHER = {
     75: ("❄️", "Heavy Snow"),
     80: ("🌦️", "Rain Showers"),
     81: ("🌧️", "Rain Showers"),
-    82: ("🌧️", "Heavy Showers"),
+    82: ("🌧️", "Heavy Rain Showers"),
     85: ("🌨️", "Snow Showers"),
     86: ("🌨️", "Heavy Snow Showers"),
     95: ("⛈️", "Thunderstorms"),
@@ -41,41 +42,10 @@ WEATHER = {
 
 print("Loading locations...", flush=True)
 
-with open("locations.json") as f:
+with open("locations.json", "r") as f:
     locations = json.load(f)
 
 print(f"Loaded {len(locations)} locations.", flush=True)
-
-
-def state_from_name(name):
-    mapping = {
-        "Salt Lake City": "Utah",
-        "Lehi": "Utah",
-        "Park City": "Utah",
-        "Provo": "Utah",
-        "Holladay": "Utah",
-        "St. George": "Utah",
-        "Boulder": "Colorado",
-        "Littleton": "Colorado",
-        "Fort Collins": "Colorado",
-        "Solana Beach": "California",
-        "Leucadia": "California",
-        "Carlsbad": "California",
-        "Rancho Bernardo": "California",
-        "Gilbert": "Arizona",
-        "Biltmore": "Arizona",
-        "Meridian": "Idaho",
-        "Boise": "Idaho",
-        "Las Vegas": "Nevada",
-        "Reno": "Nevada",
-        "Portland": "Oregon",
-        "Bend": "Oregon",
-        "Bozeman": "Montana",
-        "Plano": "Texas",
-        "Preston Hollow": "Texas",
-        "Fremont": "California",
-    }
-    return mapping.get(name, "Other")
 
 
 def fetch_weather(location):
@@ -112,7 +82,7 @@ def fetch_weather(location):
             return {
                 "success": True,
                 "name": location["name"],
-                "state": state_from_name(location["name"]),
+                "state": location["state"],
                 "high": round(data["daily"]["temperature_2m_max"][0]),
                 "low": round(data["daily"]["temperature_2m_min"][0]),
                 "rain": round(data["daily"]["precipitation_probability_max"][0]),
@@ -123,15 +93,21 @@ def fetch_weather(location):
 
         except Exception as e:
             last_error = e
+            print(
+                f"Retry {attempt+1}/3 for {location['name']} ({e})",
+                flush=True,
+            )
             time.sleep(attempt + 1)
 
     return {
         "success": False,
         "name": location["name"],
-        "state": state_from_name(location["name"]),
+        "state": location["state"],
         "error": str(last_error),
     }
 
+
+print("Fetching forecasts...", flush=True)
 
 results = []
 
@@ -147,55 +123,134 @@ results.sort(key=lambda r: order[r["name"]])
 
 good = [r for r in results if r["success"]]
 
-hottest = max(good, key=lambda x: x["high"])
-coolest = min(good, key=lambda x: x["low"])
-rainiest = max(good, key=lambda x: x["rain"])
-windiest = max(good, key=lambda x: x["wind"])
-
 groups = defaultdict(list)
 
 for r in results:
     groups[r["state"]].append(r)
 
-today = datetime.now().strftime("%A, %B %d")
+hottest = max(good, key=lambda x: x["high"])
+coolest = min(good, key=lambda x: x["low"])
+rainiest = max(good, key=lambda x: x["rain"])
+windiest = max(good, key=lambda x: x["wind"])
+
+today = datetime.now().strftime("%A, %B %d, %Y")
+
+state_order = [
+    "Utah",
+    "California",
+    "Colorado",
+    "Arizona",
+    "Idaho",
+    "Nevada",
+    "Oregon",
+    "Montana",
+    "Texas",
+]
 
 html = f"""
 <html>
-<body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;">
+<head>
+<style>
+body {{
+    background:#eef3f8;
+    font-family:Arial,Helvetica,sans-serif;
+    margin:0;
+}}
 
-<div style="max-width:900px;margin:30px auto;background:white;border-radius:14px;padding:30px;box-shadow:0 2px 12px rgba(0,0,0,.12);">
+.container {{
+    max-width:900px;
+    margin:30px auto;
+    background:white;
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:0 2px 12px rgba(0,0,0,.15);
+}}
 
-<h1 style="margin-top:0;color:#1d4e89;">
-🏡 HomeOS Morning Brief
-</h1>
+.header {{
+    background:#194f90;
+    color:white;
+    padding:30px;
+}}
 
-<p style="color:#666;">{today}</p>
+.header h1 {{
+    margin:0;
+}}
 
-<div style="background:#f4f8fc;padding:18px;border-radius:10px;margin-bottom:30px;">
+.summary {{
+    padding:20px 30px;
+    background:#f5f9fd;
+    line-height:1.8;
+}}
 
-<b>🔥 Hottest:</b> {hottest["name"]} ({hottest["high"]}°)<br>
-<b>❄️ Coolest:</b> {coolest["name"]} ({coolest["low"]}°)<br>
+.state {{
+    background:#194f90;
+    color:white;
+    padding:10px 20px;
+    font-size:20px;
+    font-weight:bold;
+    margin-top:20px;
+}}
+
+table {{
+    width:100%;
+    border-collapse:collapse;
+}}
+
+th {{
+    background:#edf3fa;
+    padding:10px;
+}}
+
+td {{
+    padding:10px;
+    border-bottom:1px solid #ececec;
+    text-align:center;
+}}
+
+td:first-child,
+th:first-child {{
+    text-align:left;
+}}
+
+.footer {{
+    text-align:center;
+    color:#888;
+    padding:25px;
+    font-size:12px;
+}}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">
+<h1>🏡 HomeOS Morning Brief</h1>
+<div>{today}</div>
+</div>
+
+<div class="summary">
+
+<b>🔥 Hottest:</b> {hottest["name"]} ({hottest["high"]}°F)<br>
+<b>❄️ Coolest:</b> {coolest["name"]} ({coolest["low"]}°F)<br>
 <b>🌧 Highest Rain Chance:</b> {rainiest["name"]} ({rainiest["rain"]}%)<br>
 <b>🌬 Windiest:</b> {windiest["name"]} ({windiest["wind"]} mph)
 
 </div>
-"""
+for state in state_order:
 
-for state in sorted(groups):
+    if state not in groups:
+        continue
 
     html += f"""
-    <h2 style="
-    background:#1d4e89;
-    color:white;
-    padding:10px 14px;
-    border-radius:8px;">
-    {state}
-    </h2>
+    <div class="state">{state}</div>
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-    <tr style="background:#edf3fa;">
-        <th align="left">City</th>
-        <th>Weather</th>
+    <table>
+
+    <tr>
+        <th>City</th>
+        <th>Conditions</th>
         <th>High</th>
         <th>Low</th>
         <th>Rain</th>
@@ -206,15 +261,20 @@ for state in sorted(groups):
     for r in groups[state]:
 
         if not r["success"]:
+
             html += f"""
             <tr>
-            <td>{r['name']}</td>
-            <td colspan="5">Unable to retrieve weather.</td>
+                <td>{r["name"]}</td>
+                <td colspan="5">❌ Unable to retrieve weather</td>
             </tr>
             """
+
             continue
 
-        icon, desc = WEATHER.get(r["code"], ("❔", "Unknown"))
+        icon, desc = WEATHER.get(
+            r["code"],
+            ("❔", "Unknown")
+        )
 
         rain = "—"
 
@@ -222,45 +282,80 @@ for state in sorted(groups):
             rain = f"{r['rain']}%"
 
         if r["amount"] > 0:
+
             if "Snow" in desc:
-                rain += f' ({r["amount"]:.2f}" snow)'
+
+                if rain == "—":
+                    rain = ""
+
+                rain += f' {r["amount"]:.2f}" snow'
+
             else:
-                rain += f' ({r["amount"]:.2f}")'
+
+                if rain == "—":
+                    rain = ""
+
+                rain += f' {r["amount"]:.2f}"'
+
+        if rain == "":
+            rain = "—"
 
         wind = "—"
+
         if r["wind"] >= 20:
-            wind = f"{r['wind']} mph"
+            wind = f'{r["wind"]} mph'
+
+        high = f'{r["high"]}°'
+        low = f'{r["low"]}°'
+
+        if r["high"] >= 100:
+            high = f'🔥 {high}'
+        elif r["high"] >= 90:
+            high = f'🟠 {high}'
+
+        if r["low"] <= 32:
+            low = f'❄️ {low}'
 
         html += f"""
-        <tr style="border-bottom:1px solid #eee;">
-            <td>{r['name']}</td>
-            <td align="center">{icon}<br><small>{desc}</small></td>
-            <td align="center">{r['high']}°</td>
-            <td align="center">{r['low']}°</td>
-            <td align="center">{rain}</td>
-            <td align="center">{wind}</td>
+        <tr>
+            <td><b>{r["name"]}</b></td>
+            <td>{icon}<br><small>{desc}</small></td>
+            <td>{high}</td>
+            <td>{low}</td>
+            <td>{rain}</td>
+            <td>{wind}</td>
         </tr>
         """
 
     html += "</table>"
 
 html += """
-<p style="text-align:center;color:#888;font-size:12px;margin-top:30px;">
-Generated automatically by HomeOS
-</p>
+<div class="footer">
+
+Generated automatically by
+<b>HomeOS Morning Brief</b>
 
 </div>
+
+</div>
+
 </body>
 </html>
 """
 
 print("Sending email...", flush=True)
 
-resend.Emails.send({
+response = resend.Emails.send({
+
     "from": "onboarding@resend.dev",
+
     "to": "porterpayne04@gmail.com",
+
     "subject": "🏡 HomeOS Morning Brief",
+
     "html": html,
+
 })
 
+print(response)
 print("Done!", flush=True)
